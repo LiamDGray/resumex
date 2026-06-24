@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest tests/database.test.js tests/resumeVaultService.test.js --coverage",
     "test:quality": "node tests/resumeOutputQuality.test.js",
     "test:real-user": "node tests/realUserProfileTest.js"
   },
@@ -17,8 +17,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "mongoose": "^8.0.0",
     "openai": "^6.17.0",
-    "pdfkit": "^0.15.0"
+    "pdfkit": "^0.15.0",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }

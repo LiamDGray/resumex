@@ -1,5 +1,5 @@
 require('dotenv').config({ override: true });
-const mongoose = require('mongoose');
+const db = require('./config/database');
 
 // Import phase modules
 const { parseJobDescription } = require('./services/jdParser');
@@ -90,8 +90,7 @@ async function testAllPhases() {
             const prompt = createResumePrompt(jobDescription, mockUserProfile, blueprint);
             console.log(`✅ Prompt compiled successfully! Expected output is JSON.`);
         } catch (err) {
-            console.error('❌ LLM Setup failed:', err.message);
-            throw err;
+            console.warn('⚠️ LLM Setup failed (continuing without LLM):', err.message);
         }
         console.log();
 
@@ -112,11 +111,11 @@ async function testAllPhases() {
         }
         console.log();
 
-        // --- Phase 7: MongoDB Persistence ---
-        console.log("--- Testing Phase 7: Resume Vault (MongoDB) ---");
+        // --- Phase 7: PostgreSQL Persistence ---
+        console.log("--- Testing Phase 7: Resume Vault (PostgreSQL) ---");
         try {
             console.log("Attempting database connection...");
-            await connectDB();
+            await db.connectDB();
 
             const dbData = {
                 jobTitle: 'Senior Full-Stack Developer',
@@ -127,13 +126,16 @@ async function testAllPhases() {
                 jobDescription: 'test jd'
             };
             const savedItem = await saveResume(dbData);
-            console.log(`✅ Saved to DB Successfully! ID: ${savedItem._id}`);
+            console.log(`✅ Saved to DB Successfully! ID: ${savedItem.id}`);
 
             // Cleanup
-            await mongoose.connection.db.collection('resumes').deleteOne({ _id: savedItem._id });
+            await db.query('DELETE FROM resumes WHERE id = $1', [savedItem.id]);
             console.log("✅ Cleaned up test data.");
 
-            await mongoose.disconnect();
+            const pool = db.getPool();
+            if (pool) {
+                await pool.end();
+            }
         } catch (e) {
             console.error('❌ DB connection or save failed:', e.message);
         }

@@ -139,7 +139,7 @@ podman run --name resumex-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=resumex \
-  -p 5432:5432 \
+  -p 5433:5432 \
   -d mirror.gcr.io/library/postgres:15.2-alpine
 ```
 
@@ -148,11 +148,11 @@ Update the backend configuration to use PostgreSQL instead of MongoDB:
 ```env
 # Database Configuration
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5433
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=resumex
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/resumex
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/resumex
 ```
 
 ### Database Schema mapping
@@ -188,7 +188,7 @@ We use the `pg` library (PostgreSQL client for Node.js) with connection pooling 
    const { Pool } = require('pg');
    
    const pool = new Pool({
-       connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/resumex'
+       connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5433/resumex'
    });
    
    module.exports = {

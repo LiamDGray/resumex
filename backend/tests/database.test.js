@@ -29,8 +29,14 @@ describe('Database Configuration', () => {
         mockPoolInstance.connect.mockReset();
         mockPoolInstance.query.mockReset();
 
-        // Spy on fs.readFileSync to mock schema.sql reading
-        jest.spyOn(fs, 'readFileSync').mockReturnValue('CREATE TABLE resumes (id VARCHAR(255) PRIMARY KEY);');
+        // Spy on fs.readFileSync to mock schema.sql reading conditionally to avoid breaking Jest/Babel internal requires
+        const originalReadFileSync = fs.readFileSync;
+        jest.spyOn(fs, 'readFileSync').mockImplementation((filePath, options) => {
+            if (typeof filePath === 'string' && filePath.includes('schema.sql')) {
+                return 'CREATE TABLE resumes (id VARCHAR(255) PRIMARY KEY);';
+            }
+            return originalReadFileSync(filePath, options);
+        });
 
         // Reset modules to clear cached state (pool, isConnected)
         jest.resetModules();

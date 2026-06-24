@@ -20,7 +20,7 @@ async function connectDB() {
     }
 
     try {
-        const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/resumex';
+        const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5433/resumex';
         
         if (!pool) {
             pool = new Pool({

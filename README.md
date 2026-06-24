@@ -11,7 +11,8 @@ ResumeX is a production-ready, context-aware resume tailoring Chrome extension a
 *   **⚙️ Settings Panel Credentials Cache**: Cache your personal email and phone number locally in the extension settings. Since LinkedIn's public main profile pages shield contact details for privacy, this cache serves as a reliable autofill fallback.
 *   **🤖 Multi-Provider LLM Core**: Supports OpenAI (`gpt-4o-mini`), Google Gemini (`gemini-2.0-flash`), and OpenRouter (`google/gemini-2.0-flash-lite:free` or auto-routing) with dynamic temperature scaling.
 *   **🛡️ Anti-Hallucination Guardrails**: Running programmatic cleanup logic (`cleanTailoredResume`) that cross-references LLM outputs against your real synced experience and education, discarding hallucinated entries.
-*   **💾 Resume Vault (Mongoose + JSON Fallback)**: Stores resume histories in MongoDB Atlas, with a seamless, fail-safe fallback to a local JSON database (`resumes_db.json`) if offline or unwhitelisted.
+*   **💾 Resume Vault (PostgreSQL + JSON Fallback)**: Stores resume histories in a local PostgreSQL database, with a seamless, fail-safe fallback to a local JSON database (`resumes_db.json`) if the database is offline.
+*   **📐 Development Standards (GEMINI.md)**: Adheres to rigorous Test-Driven Development (TDD) with 100% test coverage, feature branch discipline, subagent maximization, and Ralph loops for autonomous resilience. Refer to [GEMINI.md](file:///home/liam/src/resumex/GEMINI.md) for full details.
 *   **📥 Premium PDF Export**: Generates styled, ATS-compliant PDF resumes using `pdfkit` (bold section headers, right-aligned details, HSL-themed visual accents, and customized column-based skills layouts).
 *   **📄 Tailored Cover Letter Generator**: Generates custom cover letters mapped to the target job description and your resume tailoring blueprint, automatically falling back to general parameters (like `"Hiring Company"`) if specific details are not parsed.
 *   **🤖 Auto-Fill Application Engine**: Automatically detects form fields, parses application pages, autofills details, generates & populates cover letters, normalizes profile links into valid HTML5 URLs (ensuring `https://` prefix to bypass browser validation errors), and uploads the generated resume PDF into form inputs.
@@ -38,9 +39,10 @@ resumex/
 │   └── popup_autofill.js       # Auto-fill triggering logic
 ├── backend/                    # Express.js API Server
 │   ├── config/
-│   │   └── database.js         # MongoDB connection config
+│   │   └── database.js         # PostgreSQL connection pool config
 │   ├── models/
-│   │   └── Resume.js           # Mongoose Resume history schema
+│   │   └── schema.sql          # PostgreSQL database schema definition
+│   │   └── Resume.js           # Database access layer for Resumes
 │   ├── routes/
 │   │   └── resumeVaultRoutes.js# Save, search, stats & PDF endpoints
 │   ├── services/
@@ -81,12 +83,13 @@ resumex/
     ```bash
     cp .env.example .env
     ```
-4.  Configure the environment keys inside `.env`:
+4.  Configure the environment keys inside `.env` (refer to [GEMINI.md](file:///home/liam/src/resumex/GEMINI.md) for details):
     *   Set `LLM_PROVIDER` (e.g. `openrouter`, `openai`, or `gemini`).
     *   Add your API keys (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`).
     *   Configure `PORT` (defaults to `3001` to prevent clashes).
-    *   Provide `MONGODB_URI` (ensure username and password specials are URL-encoded).
-5.  Start the server:
+    *   Configure the PostgreSQL variables: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DATABASE_URL`.
+5.  Start the local PostgreSQL container (see [GEMINI.md](file:///home/liam/src/resumex/GEMINI.md) for Podman/Docker command).
+6.  Start the server:
     ```bash
     npm start
     ```

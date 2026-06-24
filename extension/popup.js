@@ -27,6 +27,8 @@ const apiUrlInput = document.getElementById('apiUrlInput');
 const emailInput = document.getElementById('emailInput');
 const phoneInput = document.getElementById('phoneInput');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const importProfileBtn = document.getElementById('importProfileBtn');
+const profileFileInput = document.getElementById('profileFileInput');
 
 // Default API URL (no user input needed)
 const DEFAULT_API_URL = 'https://resumex-5ij7.onrender.com';
@@ -193,6 +195,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     copyBtn.addEventListener('click', handleCopyJson);
     autoFillBtn.addEventListener('click', handleAutoFill);
     syncBtn.addEventListener('click', handleSyncProfile);
+    importProfileBtn.addEventListener('click', () => profileFileInput.click());
+    profileFileInput.addEventListener('change', handleImportProfile);
 
     // Toggle settings panel
     settingsBtn.addEventListener('click', () => {
@@ -579,4 +583,83 @@ async function preGenerateAssets(apiUrl) {
             console.log('✅ Pre-generated PDF bytes cached');
         }
     }).catch(err => console.warn('Pre-generating PDF failed:', err));
+}
+
+/**
+ * Handle local profile file import (PDF, JSON, YAML, MD)
+ */
+async function handleImportProfile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const apiUrl = await getApiUrl();
+    showStatus(`Reading file ${file.name}...`, 'loading');
+
+    const reader = new FileReader();
+    
+    reader.onload = async () => {
+        try {
+            // Get base64 string
+            const base64Content = reader.result.split(',')[1];
+            
+            showStatus('Parsing profile on backend...', 'loading');
+            
+            const response = await fetch(`${apiUrl}/api/ingest-profile`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    fileContent: base64Content,
+                    fileName: file.name,
+                    fileType: file.type
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.profile) {
+                // Add syncedAt timestamp to simulate a sync
+                result.profile.syncedAt = new Date().toISOString();
+                
+                // Save to local storage
+                await chrome.storage.local.set({
+                    userProfile: result.profile
+                });
+                
+                // Update UI
+                updateSyncStatus(result.profile);
+                
+                // Pre-fill GitHub/LinkedIn inputs if present in the imported profile
+                if (result.profile.personalInfo) {
+                    if (result.profile.personalInfo.github) {
+                        githubProfileInput.value = result.profile.personalInfo.github;
+                        chrome.storage.local.set({ [STORAGE_KEYS.GITHUB_PROFILE]: result.profile.personalInfo.github });
+                    }
+                    if (result.profile.personalInfo.linkedin) {
+                        linkedinProfileInput.value = result.profile.personalInfo.linkedin;
+                        chrome.storage.local.set({ [STORAGE_KEYS.LINKEDIN_PROFILE]: result.profile.personalInfo.linkedin });
+                    }
+                }
+                
+                showStatus(`Successfully imported profile: ${result.profile.personalInfo.name || 'User'} 🎉`, 'success');
+                settingsPanel.style.display = 'none'; // hide settings panel
+            } else {
+                showStatus(result.error || 'Failed to parse the profile file.', 'error');
+            }
+        } catch (error) {
+            console.error('Error importing profile:', error);
+            showStatus(`Import error: ${error.message}`, 'error');
+        }
+    };
+    
+    reader.onerror = () => {
+        showStatus('Failed to read local file.', 'error');
+    };
+    
+    // Read as Data URL to get base64
+    reader.readAsDataURL(file);
+    
+    // Reset file input value so same file can be selected again
+    event.target.value = '';
 }

@@ -80,16 +80,51 @@ try {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
-// Connect to MongoDB
+// Connect to PostgreSQL
 connectDB().catch(err => {
-    console.error('Failed to connect to MongoDB:', err);
+    console.error('❌ Failed to connect to PostgreSQL:', err.message);
     console.log('⚠️  Server will run without database features');
 });
 
 // Mount resume vault routes
 app.use('/api', resumeVaultRoutes);
+
+// Ingest profile endpoint for local profile uploads (PDF, JSON, YAML, Markdown)
+const { parseJSON, parseYAML, parseMarkdown, parsePDF } = require('./services/profileIngestionService');
+app.post('/api/ingest-profile', async (req, res) => {
+    try {
+        const { fileContent, fileName, fileType } = req.body;
+        if (!fileContent) {
+            return res.status(400).json({ success: false, error: 'No file content provided' });
+        }
+        
+        let profile = null;
+        const ext = fileName ? fileName.split('.').pop().toLowerCase() : '';
+        
+        if (fileType === 'application/pdf' || ext === 'pdf') {
+            const buffer = Buffer.from(fileContent, 'base64');
+            profile = await parsePDF(buffer);
+        } else {
+            const textContent = Buffer.from(fileContent, 'base64').toString('utf8');
+            if (fileType === 'application/json' || ext === 'json') {
+                profile = parseJSON(textContent);
+            } else if (ext === 'yaml' || ext === 'yml') {
+                profile = parseYAML(textContent);
+            } else if (ext === 'md' || ext === 'markdown') {
+                profile = parseMarkdown(textContent);
+            } else {
+                profile = parseMarkdown(textContent); // default fallback
+            }
+        }
+        
+        res.json({ success: true, profile });
+    } catch (error) {
+        console.error('❌ Error ingesting profile:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
